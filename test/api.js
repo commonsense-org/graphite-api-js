@@ -1,12 +1,12 @@
 var expect = chai.expect;
 
-describe('csm.Api()', function() {
+describe('cs.Api()', function() {
   var api;
   var clientId = '3b536f246f52ab62cafc4970960b5558';
   var appId = '101252815b8736362b5bd9f21eb6ce35';
 
   before(function() {
-    api = new CSMAPI({
+    api = new CSAPI({
       clientId: clientId,
       appId: appId,
       mode: 'dev',
@@ -42,9 +42,22 @@ describe('csm.Api()', function() {
     });
 
     it('should return a 404 page not found error.', function(done) {
-      api.request('v3/education/asdf', {}, function(err, response) {
+      api.request('foo', {}, function(err, response) {
         expect(err).to.be.equal('Not Found');
         done();
+      });
+    });
+
+    it('should override default query parameters.', function(done) {
+      api.request('foo', {}, function(err, response) {
+        expect(api.query.limit).to.be.equal(10);
+        expect(api.query.page).to.be.equal(1);
+
+        api.request('foo', { limit: 15, page: 3 }, function(err, response) {
+          expect(api.query.limit).to.be.equal(15);
+          expect(api.query.page).to.be.equal(3);
+          done();
+        });
       });
     });
   });
@@ -63,7 +76,7 @@ describe('csm.Api()', function() {
   });
 
   describe('#educationProducts()', function() {
-    it('should get a list of products.', function(done) {
+    it('should get a list of Education products.', function(done) {
       api.educationProducts({}, function(err, response) {
         expect(response.statusCode).to.be.equal(200);
         expect(response.count).to.be.above(0);
@@ -74,8 +87,15 @@ describe('csm.Api()', function() {
   });
 
   describe('#educationProduct()', function() {
-    it('should', function() {
-      api.educationProduct(123);
+    it('should get the details of an Education product.', function(done) {
+      api.educationProduct(1247882, {}, function(err, response) {
+        var product = response.response;
+
+        expect(product.id).to.be.equal(1247882);
+        expect(product.title).to.be.equal('Minecraft');
+        expect(product.type).to.be.equal('game');
+        done();
+      });
     });
   });
 });

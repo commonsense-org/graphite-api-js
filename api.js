@@ -1,7 +1,7 @@
 /**
  * Driver for the CSM realtime API.
  */
-function CSMAPI(options) {
+function CSAPI(options) {
   var self = this;
 
   self.options = options;
@@ -15,17 +15,40 @@ function CSMAPI(options) {
 }
 
 /**
+ * Make an asynchronous request to the Common Sense API.
  *
+ * @param string
+ *   the endpoint path of the API call.
+ * @param object
+ *   optional parameters for the API call.
+ * @param function
+ *   the callback function to be called after the async request
+ *   returns a response.  The callback is to take 2 parameters:
+ *   - err: an error message if there is a fail.
+ *   - response: the JSON response data from the call.
  */
-CSMAPI.prototype.request = function(path, options, callback) {
+CSAPI.prototype.request = function(path, options, callback) {
   var self = this;
   var xmlhttp;
   var url;
-  var query = {
+
+  self.query = {
     clientId: self.clientId,
     appId: self.appId,
+    limit: 10,
+    page: 1,
   };
 
+  // Override default query params.
+  if (options.limit) {
+    self.query.limit = options.limit;
+  }
+
+  if (options.page) {
+    self.query.page = options.page;
+  }
+
+  // Make the asynchronous call.
   if (window.XMLHttpRequest) {
     // For IE7+, Firefox, Chrome, Opera, Safari
     xmlhttp = new XMLHttpRequest();
@@ -34,6 +57,7 @@ CSMAPI.prototype.request = function(path, options, callback) {
     xmlhttp = new ActiveXObject('Microsoft.XMLHTTP');
   }
 
+  // Get the response.
   xmlhttp.onreadystatechange = function() {
     if (xmlhttp.readyState == 4) {
       if(xmlhttp.status == 200){
@@ -54,15 +78,24 @@ CSMAPI.prototype.request = function(path, options, callback) {
     }
   }
 
-  url = self.host + '/' + path + '?' + self.serialize(query);
+  url = self.host + '/' + path + '?' + self.serialize(self.query);
   xmlhttp.open('GET', url, true);
   xmlhttp.send();
 }
 
 /**
+ * Converts a JavaScript object into a URL query string.
  *
+ * Example:
+ *    obj = { hello: 'world', foo: 'bar' };
+ *    returns: hello=world&foo=bar
+ *
+ * @param object
+ *   an object with key/value pairs.
+ * @return string
+ *   a URL query string.
  */
-CSMAPI.prototype.serialize = function(obj) {
+CSAPI.prototype.serialize = function(obj) {
   var str = [];
 
   for (var p in obj) {
@@ -75,9 +108,16 @@ CSMAPI.prototype.serialize = function(obj) {
 }
 
 /**
- *
+ * Get Education products.
+ * @param object
+ *   optional parameters for the API call.
+ * @param function
+ *   the callback function to be called after the async request
+ *   returns a response.  The callback is to take 2 parameters:
+ *   - err: an error message if there is a fail.
+ *   - response: the JSON response data from the call.
  */
-CSMAPI.prototype.educationProducts = function(options, callback) {
+CSAPI.prototype.educationProducts = function(options, callback) {
   var self = this;
   var path = 'v3/education/products';
 
@@ -87,8 +127,23 @@ CSMAPI.prototype.educationProducts = function(options, callback) {
 }
 
 /**
+ * Get an Education product details.
  *
+ * @param int
+ *   a product ID.
+ * @param object
+ *   optional parameters for the API call.
+ * @param function
+ *   the callback function to be called after the async request
+ *   returns a response.  The callback is to take 2 parameters:
+ *   - err: an error message if there is a fail.
+ *   - response: the JSON response data from the call.
  */
-CSMAPI.prototype.educationProduct = function(productId, options) {
+CSAPI.prototype.educationProduct = function(productId, options, callback) {
+  var self = this;
+  var path = 'v3/education/products/' + productId;
 
+  self.request(path, {}, function(err, response) {
+    callback(err, response);
+  });
 }
