@@ -60,6 +60,48 @@ describe('cs.Api()', function() {
         });
       });
     });
+
+    it('should be able to return result sets with different limits.', function(done) {
+      api.request('v3/education/products', { limit: 3 }, function(err, response) {
+        expect(response.response.length).to.be.equal(3);
+
+        api.request('v3/education/products', { limit: 10 }, function(err, response) {
+          expect(response.response.length).to.be.equal(10);
+          done();
+        });
+      });
+    });
+
+    it('should be able to return result sets from different pages (pagenation).', function(done) {
+      // Get a data set to test against.
+      api.request('v3/education/products', { limit: 10 }, function(err, response) {
+        var productSet = response.response;
+
+        // Get data subset (page) and compare to the initial data set.
+        api.request('v3/education/products', { limit: 5, page: 1 }, function(err, response) {
+          var productsPage1 = response.response;
+
+          api.request('v3/education/products', { limit: 5, page: 2 }, function(err, response) {
+            var productsPage2 = response.response;
+
+            // Check the data set from page 1 with limit 5.
+            productsPage1.forEach(function(product, index) {
+              expect(product.id).to.be.equal(productSet[index].id);
+              expect(product.title).to.be.equal(productSet[index].title);
+            });
+
+            // Check the data set from page 2 with limit 5.
+            productsPage2.forEach(function(product, index) {
+              var index2 = index + productsPage1.length;
+              expect(product.id).to.be.equal(productSet[index2].id);
+              expect(product.title).to.be.equal(productSet[index2].title);
+            });
+
+            done();
+          });
+        });
+      });
+    });
   });
 
   describe('#serialize()', function() {
