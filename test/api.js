@@ -53,15 +53,16 @@ describe('CS.Api()', function() {
         expect(api.query.limit).to.be.equal(10);
         expect(api.query.page).to.be.equal(1);
 
-        api.request('foo', { limit: 15, page: 3 }, function(err, response) {
+        api.request('foo', { limit: 15, page: 3, fields: 'hello,world' }, function(err, response) {
           expect(api.query.limit).to.be.equal(15);
           expect(api.query.page).to.be.equal(3);
+          expect(api.query.fields).to.be.equal('hello,world');
           done();
         });
       });
     });
 
-    it('should be able to return result sets with different limits.', function(done) {
+    it('should return result sets with different limits.', function(done) {
       api.request('v3/education/products', { limit: 3 }, function(err, response) {
         expect(response.response.length).to.be.equal(3);
 
@@ -72,7 +73,7 @@ describe('CS.Api()', function() {
       });
     });
 
-    it('should be able to return result sets from different pages (pagenation).', function(done) {
+    it('should return result sets from different pages (pagenation).', function(done) {
       // Get a data set to test against.
       api.request('v3/education/products', { limit: 10 }, function(err, response) {
         var productSet = response.response;
@@ -99,6 +100,30 @@ describe('CS.Api()', function() {
 
             done();
           });
+        });
+      });
+    });
+
+    it('should return result sets with specified fields.', function(done) {
+      api.request('v3/education/products', {}, function(err, response) {
+        response.response.forEach(function(product) {
+          expect(product.id).to.exist;
+          expect(product.title).to.exist;
+          expect(product.type).to.exist;
+          expect(product.status).to.exist;
+          expect(product.created).to.exist;
+        });
+
+        api.request('v3/education/products', { fields: 'id,title' }, function(err, response) {
+          response.response.forEach(function(product) {
+            expect(product.id).to.exist;
+            expect(product.title).to.exist;
+            expect(product.type).to.not.exist;
+            expect(product.status).to.not.exist;
+            expect(product.created).to.not.exist;
+          });
+
+          done();
         });
       });
     });

@@ -35,6 +35,7 @@ CSAPI.prototype.request = function(path, options, callback) {
   self.query = {
     clientId: self.clientId,
     appId: self.appId,
+    fields: '',
     limit: 10,
     page: 1,
   };
@@ -46,6 +47,10 @@ CSAPI.prototype.request = function(path, options, callback) {
 
   if (options.page) {
     self.query.page = options.page;
+  }
+
+  if (options.fields) {
+    self.query.fields = options.fields;
   }
 
   // Make the asynchronous call.
