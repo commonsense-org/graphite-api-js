@@ -1,6 +1,6 @@
 var expect = chai.expect;
 
-describe('cs.Api()', function() {
+describe('CS.Api()', function() {
   var api;
   var clientId = '3b536f246f52ab62cafc4970960b5558';
   var appId = '101252815b8736362b5bd9f21eb6ce35';
@@ -136,6 +136,19 @@ describe('cs.Api()', function() {
         expect(product.id).to.be.equal(1247882);
         expect(product.title).to.be.equal('Minecraft');
         expect(product.type).to.be.equal('game');
+        done();
+      });
+    });
+  });
+
+  describe('#educationSearchProducts()', function() {
+    it('should get a list of Education products searched for.', function(done) {
+      var q = 'math';
+
+      api.educationSearchProducts(q, {}, function(err, response) {
+        expect(response.statusCode).to.be.equal(200);
+        expect(response.count).to.be.above(0);
+        expect(response.response.length).to.be.above(0);
         done();
       });
     });

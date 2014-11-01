@@ -147,3 +147,25 @@ CSAPI.prototype.educationProduct = function(productId, options, callback) {
     callback(err, response);
   });
 }
+
+/**
+ * Get an Education product details.
+ *
+ * @param string
+ *   search query.
+ * @param object
+ *   optional parameters for the API call.
+ * @param function
+ *   the callback function to be called after the async request
+ *   returns a response.  The callback is to take 2 parameters:
+ *   - err: an error message if there is a fail.
+ *   - response: the JSON response data from the call.
+ */
+CSAPI.prototype.educationSearchProducts = function(q, options, callback) {
+  var self = this;
+  var path = 'v3/education/search/products/' + q;
+
+  self.request(path, {}, function(err, response) {
+    callback(err, response);
+  });
+}
