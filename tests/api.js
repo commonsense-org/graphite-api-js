@@ -288,13 +288,76 @@ describe('Common Sense API Tests', function() {
 
       describe('#get' + typeName + 'List()', function() {
         it('should get a list of type: ' + type, function(done) {
-          contentTypeListTest(api, type, {}, done);
+          getContentTypeList(api, type, {}, function(err, response) {
+            expect(response.statusCode).to.be.equal(200);
+            expect(response.count).to.be.above(0);
+
+            var items = response.response;
+            items.forEach(function(item) {
+              expect(item.id).to.be.a('number');
+            });
+
+            done();
+          });
+        });
+
+        it('should get a list using options with type: ' + type, function(done) {
+          var options = {
+            limit: 11,
+            fields: 'id,title,status,created',
+          };
+
+          getContentTypeList(api, type, options, function(err, response) {
+            var items = response.response;
+
+            expect(response.statusCode).to.be.equal(200);
+            expect(response.count).to.be.above(0);
+            expect(items.length).to.be.equal(options.limit);
+
+            items.forEach(function(item) {
+              expect(item.id).to.be.a('number');
+
+              // Iterate through object keys and see if only the ones expected show up.
+              for (var key in item) {
+                expect(options.fields.split(',').indexOf(key)).to.be.above(-1);
+              }
+            });
+
+            done();
+          });
         });
       });
 
       describe('#get' + typeName + 'Item()', function() {
         it('should get a single item of type: ' + type, function(done) {
-          contentTypeItemTest(api, type, {}, done);
+          getContentTypeItem(api, type, {}, function(err, response) {
+            var item = response.response;
+
+            expect(response.statusCode).to.be.equal(200);
+            expect(item.id).to.be.a('number');
+
+            done();
+          });
+        });
+
+        it('should get a content item using options with type: ' + type, function(done) {
+          var options = {
+            fields: 'id,title,status,created',
+          };
+
+          getContentTypeItem(api, type, options, function(err, response) {
+            var item = response.response;
+
+            expect(response.statusCode).to.be.equal(200);
+            expect(item.id).to.be.a('number');
+
+            // Iterate through object keys and see if only the ones expected show up.
+            for (var key in item) {
+              expect(options.fields.split(',').indexOf(key)).to.be.above(-1);
+            }
+
+            done();
+          });
         });
       });
     });
@@ -306,37 +369,45 @@ describe('Common Sense API Tests', function() {
 });
 
 /**
- * Runs simple tests on a content type retrieved from the
- * API list() calls.
+ * Helper function to get a list of a given type.
  *
+ * @param object
+ *   an instance of CommonSenseApi().
  * @param string
- *   the content type to be tested.
+ *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+ * @param array
+ *   filter options that the Common Sense API supports.
+ * @param function
+ *   the callback function to be called after the async request.
+ *   The callback is to take 2 parameters:
+ *   - err: an error message if there is a fail.
+ *   - response: the JSON response data from the call.
  */
-function contentTypeListTest(api, type, options, done) {
+function getContentTypeList(api, type, options, callback) {
   var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
 
   // Get a list of the given type.
   api.education()['get' + typeName + 'List'](options, function(err, response) {
-    expect(response.statusCode).to.be.equal(200);
-    expect(response.count).to.be.above(0);
-
-    var items = response.response;
-    items.forEach(function(item) {
-      expect(item.id).to.be.a('number');
-    });
-
-    done();
+    callback(err, response);
   });
 }
 
 /**
- * Runs simple tests on a content type retrieved from the
- * API item() calls.
+ * Helper function to get a random content item of a given type.
  *
+ * @param object
+ *   an instance of CommonSenseApi().
  * @param string
- *   the content type to be tested.
+ *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+ * @param array
+ *   filter options that the Common Sense API supports.
+ * @param function
+ *   the callback function to be called after the async request.
+ *   The callback is to take 2 parameters:
+ *   - err: an error message if there is a fail.
+ *   - response: the JSON response data from the call.
  */
-function contentTypeItemTest(api, type, options, done) {
+function getContentTypeItem(api, type, options, callback) {
   var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
   var ids = [];
 
@@ -350,13 +421,8 @@ function contentTypeItemTest(api, type, options, done) {
 
     // Use a random ID from the list to test with.
     var id = ids[Math.floor(Math.random()*ids.length)];
-    api.education()['get' + typeName + 'Item'](id, {}, function(err, response) {
-      var item = response.response;
-
-      expect(response.statusCode).to.be.equal(200);
-      expect(item.id).to.be.a('number');
-
-      done();
+    api.education()['get' + typeName + 'Item'](id, options, function(err, response) {
+      callback(err, response);
     });
   });
 }
