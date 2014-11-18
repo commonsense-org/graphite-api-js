@@ -164,8 +164,11 @@ function CommonSenseApi(spec) {
    *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
    * @param array
    *   filter options that the Common Sense API supports.
-   * @return object
-   *   the API response data converted to an object.
+   * @param function
+   *   the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
+   *   - err: an error message if there is a fail.
+   *   - response: the JSON response data from the call.
    */
   that.getList = function(type, options, callback) {
     that.request(type, options, function(err, response) {
@@ -182,8 +185,11 @@ function CommonSenseApi(spec) {
    *   the system ID of the item.
    * @param array
    *   filter options that the Common Sense API supports.
-   * @return object
-   *   the API response data converted to an object.
+   * @param function
+   *   the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
+   *   - err: an error message if there is a fail.
+   *   - response: the JSON response data from the call.
    */
   that.getItem = function(type, id, options, callback) {
     that.request(type + '/' + id, options, function(err, response) {
@@ -262,6 +268,27 @@ function CommonSenseApiEducation(spec) {
       });
     }
   });
+
+  /**
+   * Perform a text search on a given type.
+   *
+   * @param string
+   *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   * @param q
+   *   the search string.
+   * @param array
+   *   filter options that the Common Sense API supports.
+   * @param function
+   *   the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
+   *   - err: an error message if there is a fail.
+   *   - response: the JSON response data from the call.
+   */
+  that.search = function(type, q, options, callback) {
+    that.request('search/' + type + '/' + q, options, function(err, response) {
+      callback(err, response);
+    });
+  }
 
   return that;
 }

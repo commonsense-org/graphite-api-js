@@ -361,6 +361,44 @@ describe('Common Sense API Tests', function() {
         });
       });
     });
+
+    describe('#search()', function() {
+      api.education().types.forEach(function(type) {
+        it('should get search results for type: ' + type, function(done) {
+          api.education().search(type, 'math', {}, function(err, response) {
+            var results = response.response;
+
+            expect(response.statusCode).to.be.equal(200);
+            expect(results.length).to.be.above(0);
+
+            done();
+          });
+        });
+
+        it('should get search results with options for type: ' + type, function(done) {
+          var options = {
+            limit: 7,
+            fields: 'id,title,type',
+          };
+
+          api.education().search(type, 'math', options, function(err, response) {
+            var results = response.response;
+
+            expect(response.statusCode).to.be.equal(200);
+            expect(results.length).to.be.above(0);
+
+            results.forEach(function(item) {
+              // Iterate through object keys and see if only the ones expected show up.
+              for (var key in item) {
+                expect(options.fields.split(',').indexOf(key)).to.be.above(-1);
+              }
+            });
+
+            done();
+          });
+        });
+      });
+    });
   });
 
   describe('CommonSenseApiMedia()', function() {
