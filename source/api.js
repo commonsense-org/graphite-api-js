@@ -24,8 +24,8 @@ function CommonSenseApi(spec) {
    * @param object
    *   optional parameters for the API call.
    * @param function
-   *   the callback function to be called after the async request
-   *   returns a response.  The callback is to take 2 parameters:
+   *   the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
    *   - err: an error message if there is a fail.
    *   - response: the JSON response data from the call.
    */
@@ -124,6 +124,20 @@ function CommonSenseApi(spec) {
   }
 
   /**
+   * Converts a string with underscores to camel-case text.
+   *
+   * @param string
+   *   the string to be converted.
+   * @return string
+   *   the camel-cased string.
+   */
+  that.camelCaser = function camelCase(str) {
+    return str.toLowerCase().replace(/_(.)/g, function(match, group1) {
+      return group1.toUpperCase();
+    });
+  }
+
+  /**
    * Get an instance of CommonSenseApiEducation.
    *
    * @return CommonSenseApiEducation
@@ -144,19 +158,35 @@ function CommonSenseApi(spec) {
   }
 
   /**
-   * Get Education products.
-   * @param object
-   *   optional parameters for the API call.
-   * @param function
-   *   the callback function to be called after the async request
-   *   returns a response.  The callback is to take 2 parameters:
-   *   - err: an error message if there is a fail.
-   *   - response: the JSON response data from the call.
+   * Get a list of data of a given type.
+   *
+   * @param string
+   *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   * @param array
+   *   filter options that the Common Sense API supports.
+   * @return object
+   *   the API response data converted to an object.
    */
-  that.educationProducts = function(options, callback) {
-    var path = 'v3/education/products';
+  that.getList = function(type, options, callback) {
+    that.request(type, options, function(err, response) {
+      callback(err, response);
+    });
+  }
 
-    that.request(path, {}, function(err, response) {
+  /**
+   * Get a single item of data of a given type and ID.
+   *
+   * @param string
+   *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   * @param id
+   *   the system ID of the item.
+   * @param array
+   *   filter options that the Common Sense API supports.
+   * @return object
+   *   the API response data converted to an object.
+   */
+  that.getItem = function(type, id, options, callback) {
+    that.request(type + '/' + id, options, function(err, response) {
       callback(err, response);
     });
   }
@@ -172,6 +202,66 @@ function CommonSenseApiEducation(spec) {
 
   that.platform = 'education';
   that.version = 3;
+  that.types = [
+    'products',
+    'blogs',
+    'app_flows',
+    'lists',
+    // 'user_reviews',
+    'boards',
+  ];
+
+  /**
+   * Dynamically generate a list() call for each type.
+   *
+   * Example: the function getProductsList() is generated for type: 'products'.
+   */
+  that.types.forEach(function(type) {
+    var typeName = that.camelCaser(type).charAt(0).toUpperCase() + that.camelCaser(type).slice(1);
+
+    /**
+     * Get a list of a given type.
+     *
+     * @param object
+     *   optional parameters for the API call.
+     * @param function
+     *   the callback function to be called after the async request.
+     *   The callback is to take 2 parameters:
+     *   - err: an error message if there is a fail.
+     *   - response: the JSON response data from the call.
+     */
+    that['get' + typeName + 'List'] = function(options, callback) {
+      that.getList(type, options, function(err, response) {
+        callback(err, response);
+      });
+    }
+  });
+
+  /**
+   * Dynamically generate an item() call for each type.
+   *
+   * Example: the function getProductsItem() is generated for type: 'products'.
+   */
+  that.types.forEach(function(type) {
+    var typeName = that.camelCaser(type).charAt(0).toUpperCase() + that.camelCaser(type).slice(1);
+
+    /**
+     * Get a single item of a given type.
+     *
+     * @param object
+     *   optional parameters for the API call.
+     * @param function
+     *   the callback function to be called after the async request.
+     *   The callback is to take 2 parameters:
+     *   - err: an error message if there is a fail.
+     *   - response: the JSON response data from the call.
+     */
+    that['get' + typeName + 'Item'] = function(id, options, callback) {
+      that.getItem(type, id, options, function(err, response) {
+        callback(err, response);
+      });
+    }
+  });
 
   return that;
 }

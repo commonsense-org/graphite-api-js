@@ -1,18 +1,14 @@
 var expect = chai.expect;
 
 describe('Common Sense API Tests', function() {
-  var api;
-
-  before(function() {
-    api = new CommonSenseApi({
-      clientId: config.clientId,
-      appId: config.appId,
-      host: config.host,
-    });
-
-    // Test using the education API.
-    api.platform = 'education';
+  var api = new CommonSenseApi({
+    clientId: config.clientId,
+    appId: config.appId,
+    host: config.host,
   });
+
+  // Test using the education API.
+  api.platform = 'education';
 
   describe('CommonSenseApi()', function() {
     describe('init', function() {
@@ -161,8 +157,15 @@ describe('Common Sense API Tests', function() {
       });
     });
 
+    describe('#camelCaser()', function() {
+      it('should convert a string to camel-cased.', function() {
+        expect(api.camelCaser('FOO_BAR')).to.be.equal('fooBar');
+        expect(api.camelCaser('foo_bar')).to.be.equal('fooBar');
+      });
+    });
+
     describe('#education()', function() {
-      it('should get an instance of CommonSenseApiEducation', function() {
+      it('should get an instance of CommonSenseApiEducation.', function() {
         var instance = api.education();
         expect(instance.platform).to.be.equal('education');
         expect(instance.version).to.be.equal(3);
@@ -170,19 +173,190 @@ describe('Common Sense API Tests', function() {
     });
 
     describe('#media()', function() {
-      it('should get an instance of CommonSenseApiMedia', function() {
+      it('should get an instance of CommonSenseApiMedia.', function() {
         var instance = api.media();
         expect(instance.platform).to.be.equal('media');
         expect(instance.version).to.be.equal(3);
       });
     });
+
+    describe('#getList()', function() {
+      it('should get a list of a content type.', function(done) {
+        api.getList('products', {}, function(err, response) {
+          var products = response.response;
+          expect(response.count).to.be.above(0);
+          expect(products.length).to.be.above(0);
+
+          products.forEach(function(product) {
+            expect(product.id).to.be.a('number');
+            expect(product.title).to.exist;
+          });
+
+          done();
+        });
+      });
+
+      it('should take filter options.', function(done) {
+        var limit = 7;
+        var fields = ['id', 'title', 'status'];
+
+        api.getList('products', { limit: limit, fields: fields.join(',') }, function(err, response) {
+          var products = response.response;
+
+          expect(products.length).to.be.equal(limit);
+
+          products.forEach(function(product) {
+            // Iterate through object keys and see if only the ones expected show up.
+            for (var key in product) {
+              expect(fields.indexOf(key)).to.be.above(-1);
+            }
+          });
+
+          done();
+        });
+      });
+    });
+
+    describe('#getItem()', function() {
+      it('should get a single content item.', function(done) {
+        // Get a bunch of random products to test with from the getList() call.
+        var options = {
+          limit: 50,
+          page: Math.floor(Math.random() * 10) + 1,
+        }
+
+        api.getList('products', options, function(err, response) {
+          var products = response.response;
+
+          var ids = [];
+          products.forEach(function(product) {
+            ids.push(product.id);
+          });
+
+          // Get the product item from the API.
+          var id = ids[Math.floor(Math.random()*ids.length)]; // get random id from the list.
+          api.getItem('products', id, {}, function(err, response) {
+            var product = response.response;
+
+            expect(product.id).to.be.a('number');
+            expect(product.status).to.be.a('number');
+            expect(product.title).to.be.exists;
+
+            done();
+          });
+        });
+      });
+
+      it('should take filter options.', function(done) {
+        var fields = ['id', 'title', 'status'];
+
+        // Get a bunch of random products to test with from the getList() call.
+        var options = {
+          limit: 50,
+          page: Math.floor(Math.random() * 10) + 1,
+        }
+
+        api.getList('products', options, function(err, response) {
+          var products = response.response;
+
+          var ids = [];
+          products.forEach(function(product) {
+            ids.push(product.id);
+          });
+
+          // Get the product item from the API.
+          var id = ids[Math.floor(Math.random()*ids.length)]; // get random id from the list.
+          api.getItem('products', id, { fields: fields.join(',') }, function(err, response) {
+            var product = response.response;
+
+            // Iterate through object keys and see if only the ones expected show up.
+            for (var key in product) {
+              expect(fields.indexOf(key)).to.be.above(-1);
+            }
+
+            done();
+          });
+        });
+      });
+    });
   });
 
   describe('CommonSenseApiEducation()', function() {
+    // Dynamically run tests for each type.
+    api.education().types.forEach(function(type) {
+      var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
 
+      describe('#get' + typeName + 'List()', function() {
+        it('should get a list of type: ' + type, function(done) {
+          contentTypeListTest(api, type, {}, done);
+        });
+      });
+
+      describe('#get' + typeName + 'Item()', function() {
+        it('should get a single item of type: ' + type, function(done) {
+          contentTypeItemTest(api, type, {}, done);
+        });
+      });
+    });
   });
 
   describe('CommonSenseApiMedia()', function() {
 
   });
 });
+
+/**
+ * Runs simple tests on a content type retrieved from the
+ * API list() calls.
+ *
+ * @param string
+ *   the content type to be tested.
+ */
+function contentTypeListTest(api, type, options, done) {
+  var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
+
+  // Get a list of the given type.
+  api.education()['get' + typeName + 'List'](options, function(err, response) {
+    expect(response.statusCode).to.be.equal(200);
+    expect(response.count).to.be.above(0);
+
+    var items = response.response;
+    items.forEach(function(item) {
+      expect(item.id).to.be.a('number');
+    });
+
+    done();
+  });
+}
+
+/**
+ * Runs simple tests on a content type retrieved from the
+ * API item() calls.
+ *
+ * @param string
+ *   the content type to be tested.
+ */
+function contentTypeItemTest(api, type, options, done) {
+  var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
+  var ids = [];
+
+  // Get a list of IDs of the given type.
+  api.education()['get' + typeName + 'List']({ fields: 'id' }, function(err, response) {
+    var items = response.response;
+
+    items.forEach(function(item) {
+      ids.push(item.id);
+    });
+
+    // Use a random ID from the list to test with.
+    var id = ids[Math.floor(Math.random()*ids.length)];
+    api.education()['get' + typeName + 'Item'](id, {}, function(err, response) {
+      var item = response.response;
+
+      expect(response.statusCode).to.be.equal(200);
+      expect(item.id).to.be.a('number');
+
+      done();
+    });
+  });
+}
