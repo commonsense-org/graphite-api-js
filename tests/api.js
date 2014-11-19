@@ -68,7 +68,13 @@ describe('Common Sense API Tests', function() {
           expect(api.query.limit).to.be.equal(10);
           expect(api.query.page).to.be.equal(1);
 
-          api.request('foo', { limit: 15, page: 3, fields: 'hello,world' }, function(err, response) {
+          var options = {
+            limit: 15,
+            page: 3,
+            fields: ['hello', 'world'],
+          };
+
+          api.request('foo', options, function(err, response) {
             expect(api.query.limit).to.be.equal(15);
             expect(api.query.page).to.be.equal(3);
             expect(api.query.fields).to.be.equal('hello,world');
@@ -129,7 +135,11 @@ describe('Common Sense API Tests', function() {
             expect(product.created).to.exist;
           });
 
-          api.request('products', { fields: 'id,title' }, function(err, response) {
+          var options = {
+            fields: ['id', 'title'],
+          };
+
+          api.request('products', options, function(err, response) {
             response.response.forEach(function(product) {
               expect(product.id).to.exist;
               expect(product.title).to.exist;
@@ -197,18 +207,20 @@ describe('Common Sense API Tests', function() {
       });
 
       it('should take filter options.', function(done) {
-        var limit = 7;
-        var fields = ['id', 'title', 'status'];
+        var options = {
+          limit: 7,
+          fields: ['id', 'title', 'status'],
+        };
 
-        api.getList('products', { limit: limit, fields: fields.join(',') }, function(err, response) {
+        api.getList('products', options, function(err, response) {
           var products = response.response;
 
-          expect(products.length).to.be.equal(limit);
+          expect(products.length).to.be.equal(options.limit);
 
           products.forEach(function(product) {
             // Iterate through object keys and see if only the ones expected show up.
             for (var key in product) {
-              expect(fields.indexOf(key)).to.be.above(-1);
+              expect(options.fields.indexOf(key)).to.be.above(-1);
             }
           });
 
@@ -254,7 +266,7 @@ describe('Common Sense API Tests', function() {
         var options = {
           limit: 50,
           page: Math.floor(Math.random() * 10) + 1,
-        }
+        };
 
         api.getList('products', options, function(err, response) {
           var products = response.response;
@@ -266,7 +278,7 @@ describe('Common Sense API Tests', function() {
 
           // Get the product item from the API.
           var id = ids[Math.floor(Math.random()*ids.length)]; // get random id from the list.
-          api.getItem('products', id, { fields: fields.join(',') }, function(err, response) {
+          api.getItem('products', id, { fields: fields }, function(err, response) {
             var product = response.response;
 
             // Iterate through object keys and see if only the ones expected show up.
@@ -304,7 +316,7 @@ describe('Common Sense API Tests', function() {
         it('should get a list using options with type: ' + type, function(done) {
           var options = {
             limit: 11,
-            fields: 'id,title,status,created',
+            fields: ['id', 'title', 'status', 'created'],
           };
 
           getContentTypeList(api, type, options, function(err, response) {
@@ -319,7 +331,7 @@ describe('Common Sense API Tests', function() {
 
               // Iterate through object keys and see if only the ones expected show up.
               for (var key in item) {
-                expect(options.fields.split(',').indexOf(key)).to.be.above(-1);
+                expect(options.fields.indexOf(key)).to.be.above(-1);
               }
             });
 
@@ -342,7 +354,7 @@ describe('Common Sense API Tests', function() {
 
         it('should get a content item using options with type: ' + type, function(done) {
           var options = {
-            fields: 'id,title,status,created',
+            fields: ['id' , 'title', 'status', 'created'],
           };
 
           getContentTypeItem(api, type, options, function(err, response) {
@@ -353,7 +365,7 @@ describe('Common Sense API Tests', function() {
 
             // Iterate through object keys and see if only the ones expected show up.
             for (var key in item) {
-              expect(options.fields.split(',').indexOf(key)).to.be.above(-1);
+              expect(options.fields.indexOf(key)).to.be.above(-1);
             }
 
             done();
@@ -378,7 +390,7 @@ describe('Common Sense API Tests', function() {
         it('should get search results with options for type: ' + type, function(done) {
           var options = {
             limit: 7,
-            fields: 'id,title,type',
+            fields: ['id', 'title', 'type'],
           };
 
           api.education().search(type, 'math', options, function(err, response) {
@@ -390,7 +402,7 @@ describe('Common Sense API Tests', function() {
             results.forEach(function(item) {
               // Iterate through object keys and see if only the ones expected show up.
               for (var key in item) {
-                expect(options.fields.split(',').indexOf(key)).to.be.above(-1);
+                expect(options.fields.indexOf(key)).to.be.above(-1);
               }
             });
 
@@ -450,7 +462,7 @@ function getContentTypeItem(api, type, options, callback) {
   var ids = [];
 
   // Get a list of IDs of the given type.
-  api.education()['get' + typeName + 'List']({ fields: 'id' }, function(err, response) {
+  api.education()['get' + typeName + 'List']({ fields: ['id'] }, function(err, response) {
     var items = response.response;
 
     items.forEach(function(item) {

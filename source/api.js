@@ -37,7 +37,7 @@ function CommonSenseApi(spec) {
     that.query = {
       clientId: that.clientId,
       appId: that.appId,
-      fields: '',
+      fields: [],
       limit: 10,
       page: 1,
     };
@@ -52,7 +52,7 @@ function CommonSenseApi(spec) {
     }
 
     if (options.fields) {
-      that.query.fields = options.fields;
+      that.query.fields = options.fields.join(',');
     }
 
     // Make the asynchronous call.
