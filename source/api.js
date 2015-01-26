@@ -270,7 +270,15 @@ function CommonSenseApiEducation(spec) {
   });
 
   /**
+   * Get a list of taxonomy terms of a specified vocabulary.
    *
+   * @param string
+   *   a vocabulary ID.
+   * @param function
+   *   the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
+   *   - err: an error message if there is a fail.
+   *   - response: the JSON response data from the call.
    */
   that.getTermsList = function(vocabulary, callback) {
     var options = {};
