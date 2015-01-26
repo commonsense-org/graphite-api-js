@@ -300,7 +300,13 @@ describe('Common Sense API Tests', function() {
 
       describe('#get' + typeName + 'List()', function() {
         it('should get a list of type: ' + type, function(done) {
-          getContentTypeList(api, type, {}, function(err, response) {
+          var options = {};
+          if (type == 'lists') {
+            // Don't display product details in each top picks lists so the test runs faster.
+            options['fields'] = ['-products'];
+          }
+
+          getContentTypeList(api, type, options, function(err, response) {
             expect(response.statusCode).to.be.equal(200);
             expect(response.count).to.be.above(0);
 
@@ -374,6 +380,38 @@ describe('Common Sense API Tests', function() {
       });
     });
 
+    describe('#getTermsList', function() {
+      var vocabularies = [
+        'app_genre',
+        'app_platforms',
+        'app_publishers',
+        'entertainment_product_awards',
+        'pricing_structure',
+        'education_special_needs',
+        'grades',
+        'education_subjects',
+        'education_skills',
+        'tv_genre',
+      ];
+
+      vocabularies.forEach(function(vocabulary) {
+        it('should get terms for the vocabulary: ' + vocabulary, function(done) {
+          api.education().getTermsList(vocabulary, function(err, response) {
+            var terms = response.response;
+            terms.forEach(function(term) {
+              expect(term.parent_id).not.to.be.null;
+              expect(term.vocabulary).not.to.be.null;
+              expect(term.type).not.to.be.null;
+              expect(term.id).not.to.be.null;
+              expect(term.type).to.be.equal(vocabulary);
+            });
+
+            done();
+          });
+        });
+      });
+    });
+
     describe('#search()', function() {
       api.education().types.forEach(function(type) {
         it('should get search results for type: ' + type, function(done) {
@@ -390,7 +428,7 @@ describe('Common Sense API Tests', function() {
         it('should get search results with options for type: ' + type, function(done) {
           var options = {
             limit: 7,
-            fields: ['id', 'title', 'type'],
+            fields: ['id', 'title', 'type', 'score'],
           };
 
           api.education().search(type, 'math', options, function(err, response) {
@@ -402,6 +440,7 @@ describe('Common Sense API Tests', function() {
             results.forEach(function(item) {
               // Iterate through object keys and see if only the ones expected show up.
               for (var key in item) {
+                // console.log(key);
                 expect(options.fields.indexOf(key)).to.be.above(-1);
               }
             });

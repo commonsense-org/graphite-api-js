@@ -213,7 +213,7 @@ function CommonSenseApiEducation(spec) {
     'blogs',
     'app_flows',
     'lists',
-    // 'user_reviews',
+    'user_reviews',
     'boards',
   ];
 
@@ -268,6 +268,18 @@ function CommonSenseApiEducation(spec) {
       });
     }
   });
+
+  /**
+   *
+   */
+  that.getTermsList = function(vocabulary, callback) {
+    var options = {};
+
+    that.request('terms/' + vocabulary, options, function(err, response) {
+      callback(err, response);
+    });
+  }
+
 
   /**
    * Perform a text search on a given type.
