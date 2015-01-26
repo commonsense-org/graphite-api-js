@@ -380,7 +380,7 @@ describe('Common Sense API Tests', function() {
       });
     });
 
-    describe('#getTermsList', function() {
+    describe('#getTermsList()', function() {
       var vocabularies = [
         'app_genre',
         'app_platforms',
