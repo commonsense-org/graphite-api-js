@@ -10,6 +10,18 @@ function CommonSenseApi(spec) {
   that.version = 3;
   that.platform = 'global';
 
+  // Set request query defaults.
+  that.query = {
+    clientId: that.clientId,
+    appId: that.appId,
+    fields: [],
+    limit: 10,
+    page: 1,
+  };
+
+  // Debug mode used for tests.
+  that.debug = spec.debug ? spec.debug : false;
+
   // Set API host to call.
   that.host = spec.host;
   if (!spec.host) {
@@ -31,16 +43,7 @@ function CommonSenseApi(spec) {
    */
   that.request = function(path, options, callback) {
     var xmlhttp;
-    var url;
     var urlParts;
-
-    that.query = {
-      clientId: that.clientId,
-      appId: that.appId,
-      fields: [],
-      limit: 10,
-      page: 1,
-    };
 
     // Override default query params.
     if (options.limit) {
@@ -53,6 +56,21 @@ function CommonSenseApi(spec) {
 
     if (options.fields) {
       that.query.fields = options.fields.join(',');
+    } else {
+      // Remove fields if it doesn't exists so it doesn't show up in the request URL.
+      delete that.query.fields;
+    }
+
+    // Add remaining options to the query string.
+    for (var key in options) {
+      if (['limit', 'page', 'fields'].indexOf(key) == -1) {
+        var value = options[key];
+        if (options[key] instanceof Array) {
+          // Convert array parameters to comma a separated list.
+          value = options[key].join(',');
+        }
+        that.query[key] = value;
+      }
     }
 
     // Make the asynchronous call.
@@ -68,7 +86,29 @@ function CommonSenseApi(spec) {
     xmlhttp.onreadystatechange = function() {
       if (xmlhttp.readyState == 4) {
         if(xmlhttp.status == 200){
-          callback(null, eval('(' + xmlhttp.responseText + ')'));
+          var json = eval('(' + xmlhttp.responseText + ')');
+
+          // Create taxonomy trees if defined.
+          if (options.tree) {
+            var isArray = false;
+            if (Object.prototype.toString.call(json.response) === '[object Array]') {
+              isArray = true;
+            }
+
+            options.tree.forEach(function(term) {
+              if (isArray) {
+                // Create tree for list results.
+                json.response.forEach(function(item) {
+                  item[term] = that.generateTermTree(item[term]);
+                });
+              } else {
+                // Create tree for a single object.
+                json.response[term] = that.generateTermTree(json.response[term]);
+              }
+            });
+          }
+
+          callback(null, json);
         }
         else if(xmlhttp.status == 401) {
           callback(xmlhttp.statusText);
@@ -93,10 +133,15 @@ function CommonSenseApi(spec) {
       path,
     ];
 
-    url =  urlParts.join('/')  + '?' + that.serialize(that.query);
+    that.url =  urlParts.join('/')  + '?' + that.serialize(that.query);
 
-    xmlhttp.open('GET', url, true);
-    xmlhttp.send();
+    if (!that.debug) {
+      xmlhttp.open('GET', that.url, true);
+      xmlhttp.send();
+    } else {
+      // Dummy response for tests.
+      callback(null, { success: 1 });
+    }
   }
 
   /**
@@ -124,6 +169,29 @@ function CommonSenseApi(spec) {
   }
 
   /**
+   * Converts a URL query string into a JavaScript object.
+   *
+   * Example:
+   *    query = hello=world&foo=bar
+   *    returns: { hello: 'world', foo: 'bar' };
+   *
+   * @param string
+   *   a URL query string.
+   * @return string
+   *   an object with key/value pairs.
+   */
+  that.deserialize = function(query) {
+    var obj = {};
+
+    query.split('&').forEach(function(param) {
+      var parts = param.split('=');
+      obj[parts[0]] = parts[1];
+    });
+
+    return obj;
+  }
+
+  /**
    * Converts a string with underscores to camel-case text.
    *
    * @param string
@@ -131,10 +199,33 @@ function CommonSenseApi(spec) {
    * @return string
    *   the camel-cased string.
    */
-  that.camelCaser = function camelCase(str) {
+  that.camelCaser = function (str) {
     return str.toLowerCase().replace(/_(.)/g, function(match, group1) {
       return group1.toUpperCase();
     });
+  }
+
+  /**
+   * Converts a flat array of taxonomy terms to a hierarchical tree structure.
+   *
+   * @param array
+   *   an array of term objects.
+   * @return array
+   *   an array of term objects with nested children.
+   */
+  that.generateTermTree = function(terms, parentId) {
+    var tree = [];
+    parentId = parentId ? parentId : 0;
+
+    terms.forEach(function(term) {
+      if (term.parent_id == parentId) {
+        children = [];
+        term.children = that.generateTermTree(terms, term.id);
+        tree.push(term);
+      }
+    });
+
+    return tree;
   }
 
   /**
@@ -280,14 +371,11 @@ function CommonSenseApiEducation(spec) {
    *   - err: an error message if there is a fail.
    *   - response: the JSON response data from the call.
    */
-  that.getTermsList = function(vocabulary, callback) {
-    var options = {};
-
+  that.getTermsList = function(vocabulary, options, callback) {
     that.request('terms/' + vocabulary, options, function(err, response) {
       callback(err, response);
     });
   }
-
 
   /**
    * Perform a text search on a given type.

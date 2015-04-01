@@ -1,20 +1,44 @@
 var expect = chai.expect;
 
 describe('Common Sense API Tests', function() {
-  var api = new CommonSenseApi({
-    clientId: config.clientId,
-    appId: config.appId,
-    host: config.host,
-  });
+  var clientId = '1234567';
+  var appId = 'abcdefg';
+  var host = 'https://api-dev.commonsense.org';
+  var api;
+  var baseURL;
+  var baseQuery;
 
-  // Test using the education API.
-  api.platform = 'education';
+  beforeEach(function() {
+    api = new CommonSenseApi({
+      clientId: clientId,
+      appId: appId,
+      host: host,
+      debug: true, // Set debug mode for tests.
+    });
+
+    // Test using the education API.
+    api.platform = 'education';
+
+    // Define the base request URL and query string.
+    baseURL = [
+      api.host,
+      'v' + api.version,
+      api.platform,
+    ];
+
+    baseQuery = {
+      clientId: api.clientId,
+      appId: api.appId,
+      limit: api.query.limit,
+      page: api.query.page,
+    };
+  });
 
   describe('CommonSenseApi()', function() {
     describe('init', function() {
       it('should load options when instantiated.', function() {
-        expect(api.clientId).to.be.equal(config.clientId);
-        expect(api.appId).to.be.equal(config.appId);
+        expect(api.clientId).to.be.equal(clientId);
+        expect(api.appId).to.be.equal(appId);
       });
 
       it('should override host if defined, defaulted to production.', function() {
@@ -33,30 +57,133 @@ describe('Common Sense API Tests', function() {
       });
     });
 
+    describe('#serialize()', function() {
+      it('should convert a key/value object to a query string.', function() {
+        var obj = {
+          foo: 'bar',
+          bar: 'bats',
+          hello: 'world',
+        }
+
+        query = api.serialize(obj);
+        expect(query).to.be.equal('foo=bar&bar=bats&hello=world');
+      });
+    });
+
+    describe('#deserialize()', function() {
+      it('should convert a query string to a key/value object.', function() {
+        var obj = {
+          foo: 'bar',
+          bar: 'bats',
+          hello: 'world',
+        }
+
+        query = api.deserialize(api.serialize(obj));
+        expect(query).to.be.eql(obj);
+      });
+    });
+
+    describe('#camelCaser()', function() {
+      it('should convert a string to camel-cased.', function() {
+        expect(api.camelCaser('FOO_BAR')).to.be.equal('fooBar');
+        expect(api.camelCaser('foo_bar')).to.be.equal('fooBar');
+      });
+    });
+
+    describe('#generateTermTree()', function() {
+      it('should create a tree with no levels of nesting.', function() {
+        var terms = [
+          { id: 1, parent_id: 0, name: 'foo 1' },
+          { id: 2, parent_id: 0, name: 'foo 2' },
+          { id: 3, parent_id: 0, name: 'foo 3' },
+          { id: 4, parent_id: 0, name: 'foo 4' },
+          { id: 5, parent_id: 0, name: 'foo 5' },
+        ];
+
+        var tree = api.generateTermTree(terms);
+        tree.forEach(function(term) {
+          expect(term.parent_id).to.be.equal(0);
+          expect(term.children.length).to.be.equal(0);
+        });
+      });
+
+      it('should create a tree with n levels of nesting.', function() {
+        var terms = [
+          { id: 1, parent_id: 0, name: 'foo 1' },
+          { id: 2, parent_id: 0, name: 'foo 2' },
+          { id: 3, parent_id: 2, name: 'foo 3' },
+          { id: 4, parent_id: 2, name: 'foo 4' },
+          { id: 5, parent_id: 2, name: 'foo 5' },
+          { id: 6, parent_id: 5, name: 'foo 6' },
+          { id: 7, parent_id: 5, name: 'foo 7' },
+          { id: 8, parent_id: 5, name: 'foo 8' },
+          { id: 9, parent_id: 8, name: 'foo 9' },
+          { id: 10, parent_id: 0, name: 'foo 10' },
+        ];
+
+        var tree = api.generateTermTree(terms);
+        tree.forEach(function(term) {
+          // Test each of the levels.
+          switch(term.id) {
+            case 1:
+            case 10:
+              // Check level 0.
+              expect(term.children).to.be.eql([]);
+              break;
+
+            case 2:
+              expect(term.children.length).to.be.equal(3);
+
+              // Check the children IDs.
+              term.children.forEach(function(child) {
+                expect([3,4,5].indexOf(child.id)).to.be.above(-1);
+
+                // Check level 1.
+                if (child.id == 5) {
+                  child.children.forEach(function(grandChild) {
+                    expect([6,7,8].indexOf(grandChild.id)).to.be.above(-1);
+
+                    // Check level 2.
+                    if (grandChild.id == 8) {
+                      expect(grandChild.children.length).to.be.equal(1);
+
+                      // Check level 3.
+                      var greatGrandChild = grandChild.children[0];
+                      expect(greatGrandChild.children).to.be.eql([]);
+                    }
+                  });
+                }
+              });
+              break;
+          }
+        });
+      });
+    });
+
     describe('#request()', function() {
       it('should make a request to an external service.', function(done) {
-        api.request('users/1', {}, function(err, response) {
-          var user = response.response;
-          expect(user.id).to.be.equal(1);
-          expect(user.first_name).to.be.equal('testing');
-          expect(user.last_name).to.be.equal('tester');
-          expect(user.display_name).to.be.equal('testing t.');
+        var endpoint = 'foo/123';
+        baseURL.push(endpoint);
+
+        api.request(endpoint, {}, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          compareURLs(api.url, url);
           done();
         });
       });
 
       it('should return a 401 authentication error.', function(done) {
-        var clientId = api.clientId;
-        api.clientId = 'foobar';
+        api.debug = false;
 
         api.request('users/1', {}, function(err, response) {
           expect(err).to.be.equal('Unauthorized');
-          api.clientId = clientId;
           done();
         });
       });
 
       it('should return a 404 page not found error.', function(done) {
+        api.debug = false;
+
         api.request('foo', {}, function(err, response) {
           expect(err).to.be.equal('Not Found');
           done();
@@ -83,95 +210,60 @@ describe('Common Sense API Tests', function() {
         });
       });
 
-      it('should return result sets with different limits.', function(done) {
-        api.request('products', { limit: 3 }, function(err, response) {
-          expect(response.response.length).to.be.equal(3);
+      it('should make a request with different limits.', function(done) {
+        var endpoint = 'foo/123';
+        baseURL.push(endpoint);
+        baseQuery.limit = 3;
 
-          api.request('products', { limit: 10 }, function(err, response) {
-            expect(response.response.length).to.be.equal(10);
+        api.request(endpoint, { limit: 3 }, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          compareURLs(api.url, url);
+
+          // Test another.
+          baseQuery.limit = 123;
+          api.request(endpoint, { limit: 123 }, function(err, response) {
+            expect(api.url).to.be.equal(baseURL.join('/') + '?' + api.serialize(baseQuery));
+
             done();
           });
         });
       });
 
-      it('should return result sets from different pages (pagenation).', function(done) {
-        // Get a data set to test against.
-        api.request('products', { limit: 10 }, function(err, response) {
-          var productSet = response.response;
+      it('should make a request with different pages.', function(done) {
+        var endpoint = 'foo/123';
+        baseURL.push(endpoint);
+        baseQuery.page = 3;
 
-          // Get data subset (page) and compare to the initial data set.
-          api.request('products', { limit: 5, page: 1 }, function(err, response) {
-            var productsPage1 = response.response;
+        api.request(endpoint, { page: 3 }, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          compareURLs(api.url, url);
 
-            api.request('products', { limit: 5, page: 2 }, function(err, response) {
-              var productsPage2 = response.response;
+          // Test another.
+          baseQuery.page = 10;
+          api.request(endpoint, { page: 10 }, function(err, response) {
+            var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+            compareURLs(api.url, url);
 
-              // Check the data set from page 1 with limit 5.
-              productsPage1.forEach(function(product, index) {
-                expect(product.id).to.be.equal(productSet[index].id);
-                expect(product.title).to.be.equal(productSet[index].title);
-              });
-
-              // Check the data set from page 2 with limit 5.
-              productsPage2.forEach(function(product, index) {
-                var index2 = index + productsPage1.length;
-                expect(product.id).to.be.equal(productSet[index2].id);
-                expect(product.title).to.be.equal(productSet[index2].title);
-              });
-
-              done();
-            });
+            done();
           });
         });
       });
 
       it('should return result sets with specified fields.', function(done) {
-        api.request('products', {}, function(err, response) {
-          response.response.forEach(function(product) {
-            expect(product.id).to.exist;
-            expect(product.title).to.exist;
-            expect(product.type).to.exist;
-            expect(product.status).to.exist;
-            expect(product.created).to.exist;
-          });
+        var endpoint = 'foo/123';
+        baseURL.push(endpoint);
 
-          var options = {
-            fields: ['id', 'title'],
-          };
+        var fields = ['foo', 'bar', 'baz'];
+        baseQuery.fields = fields.join(',');
 
-          api.request('products', options, function(err, response) {
-            response.response.forEach(function(product) {
-              expect(product.id).to.exist;
-              expect(product.title).to.exist;
-              expect(product.type).to.not.exist;
-              expect(product.status).to.not.exist;
-              expect(product.created).to.not.exist;
-            });
-
-            done();
-          });
+        api.request(endpoint, { fields: fields }, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          compareURLs(api.url, url);
+          done();
         });
       });
-    });
 
-    describe('#serialize()', function() {
-      it('should convert a key/value object to a query string.', function() {
-        var obj = {
-          foo: 'bar',
-          bar: 'bats',
-          hello: 'world',
-        }
-
-        query = api.serialize(obj);
-        expect(query).to.be.equal('foo=bar&bar=bats&hello=world');
-      });
-    });
-
-    describe('#camelCaser()', function() {
-      it('should convert a string to camel-cased.', function() {
-        expect(api.camelCaser('FOO_BAR')).to.be.equal('fooBar');
-        expect(api.camelCaser('foo_bar')).to.be.equal('fooBar');
-      });
+      it('should return taxonomy terms in a tree when defined.');
     });
 
     describe('#education()', function() {
@@ -192,38 +284,56 @@ describe('Common Sense API Tests', function() {
 
     describe('#getList()', function() {
       it('should get a list of a content type.', function(done) {
-        api.getList('products', {}, function(err, response) {
-          var products = response.response;
-          expect(response.count).to.be.above(0);
-          expect(products.length).to.be.above(0);
+        var endpoint = 'foobar';
+        baseURL.push(endpoint);
 
-          products.forEach(function(product) {
-            expect(product.id).to.be.a('number');
-            expect(product.title).to.exist;
-          });
-
+        api.getList(endpoint, {}, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          compareURLs(api.url, url);
           done();
         });
       });
 
       it('should take filter options.', function(done) {
+        var endpoint = 'foobar';
+        baseURL.push(endpoint);
+
         var options = {
           limit: 7,
           fields: ['id', 'title', 'status'],
         };
 
-        api.getList('products', options, function(err, response) {
-          var products = response.response;
+        baseQuery.limit = options.limit;
+        baseQuery.fields = options.fields;
 
-          expect(products.length).to.be.equal(options.limit);
+        api.getList(endpoint, options, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          compareURLs(api.url, url);
+          done();
+        });
+      });
 
-          products.forEach(function(product) {
-            // Iterate through object keys and see if only the ones expected show up.
-            for (var key in product) {
-              expect(options.fields.indexOf(key)).to.be.above(-1);
-            }
-          });
+      it('should take term filters.', function(done) {
+        var endpoint = 'foobar';
+        baseURL.push(endpoint);
 
+        var options = {
+          limit: 7,
+          fields: ['id', 'title', 'status'],
+          foo: [1, 2, 3],
+          bar: ['one', 'two', 'three'],
+          baz: 'foobar',
+        };
+
+        baseQuery.limit = options.limit;
+        baseQuery.fields = options.fields;
+        baseQuery.foo = options.foo;
+        baseQuery.bar = options.bar;
+        baseQuery.baz = options.baz;
+
+        api.getList(endpoint, options, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          compareURLs(api.url, url);
           done();
         });
       });
@@ -231,222 +341,64 @@ describe('Common Sense API Tests', function() {
 
     describe('#getItem()', function() {
       it('should get a single content item.', function(done) {
-        // Get a bunch of random products to test with from the getList() call.
-        var options = {
-          limit: 50,
-          page: Math.floor(Math.random() * 10) + 1,
-        }
+        var endpoint = 'foobar';
+        baseURL.push(endpoint);
 
-        api.getList('products', options, function(err, response) {
-          var products = response.response;
+        var id = 123;
+        baseURL.push(id);
 
-          var ids = [];
-          products.forEach(function(product) {
-            ids.push(product.id);
-          });
-
-          // Get the product item from the API.
-          var id = ids[Math.floor(Math.random()*ids.length)]; // get random id from the list.
-          api.getItem('products', id, {}, function(err, response) {
-            var product = response.response;
-
-            expect(product.id).to.be.a('number');
-            expect(product.status).to.be.a('number');
-            expect(product.title).to.be.exists;
-
-            done();
-          });
+        api.getItem(endpoint, id, {}, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          compareURLs(api.url, url);
+          done();
         });
       });
 
       it('should take filter options.', function(done) {
-        var fields = ['id', 'title', 'status'];
+        var endpoint = 'foobar';
+        baseURL.push(endpoint);
 
-        // Get a bunch of random products to test with from the getList() call.
+        var id = 123;
+        baseURL.push(id);
+
         var options = {
-          limit: 50,
-          page: Math.floor(Math.random() * 10) + 1,
+          limit: 7,
+          fields: ['id', 'title', 'status'],
         };
 
-        api.getList('products', options, function(err, response) {
-          var products = response.response;
+        baseQuery.limit = options.limit;
+        baseQuery.fields = options.fields;
 
-          var ids = [];
-          products.forEach(function(product) {
-            ids.push(product.id);
-          });
-
-          // Get the product item from the API.
-          var id = ids[Math.floor(Math.random()*ids.length)]; // get random id from the list.
-          api.getItem('products', id, { fields: fields }, function(err, response) {
-            var product = response.response;
-
-            // Iterate through object keys and see if only the ones expected show up.
-            for (var key in product) {
-              expect(fields.indexOf(key)).to.be.above(-1);
-            }
-
-            done();
-          });
+        api.getItem(endpoint, id, options, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          compareURLs(api.url, url);
+          done();
         });
       });
     });
   });
 
   describe('CommonSenseApiEducation()', function() {
-    // Dynamically run tests for each type.
-    api.education().types.forEach(function(type) {
-      var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
-
-      describe('#get' + typeName + 'List()', function() {
-        it('should get a list of type: ' + type, function(done) {
-          var options = {};
-          if (type == 'lists') {
-            // Don't display product details in each top picks lists so the test runs faster.
-            options['fields'] = ['-products'];
-          }
-
-          getContentTypeList(api, type, options, function(err, response) {
-            expect(response.statusCode).to.be.equal(200);
-            expect(response.count).to.be.above(0);
-
-            var items = response.response;
-            items.forEach(function(item) {
-              expect(item.id).to.be.a('number');
-            });
-
-            done();
-          });
-        });
-
-        it('should get a list using options with type: ' + type, function(done) {
-          var options = {
-            limit: 11,
-            fields: ['id', 'title', 'status', 'created'],
-          };
-
-          getContentTypeList(api, type, options, function(err, response) {
-            var items = response.response;
-
-            expect(response.statusCode).to.be.equal(200);
-            expect(response.count).to.be.above(0);
-            expect(items.length).to.be.equal(options.limit);
-
-            items.forEach(function(item) {
-              expect(item.id).to.be.a('number');
-
-              // Iterate through object keys and see if only the ones expected show up.
-              for (var key in item) {
-                expect(options.fields.indexOf(key)).to.be.above(-1);
-              }
-            });
-
-            done();
-          });
-        });
-      });
-
-      describe('#get' + typeName + 'Item()', function() {
-        it('should get a single item of type: ' + type, function(done) {
-          getContentTypeItem(api, type, {}, function(err, response) {
-            var item = response.response;
-
-            expect(response.statusCode).to.be.equal(200);
-            expect(item.id).to.be.a('number');
-
-            done();
-          });
-        });
-
-        it('should get a content item using options with type: ' + type, function(done) {
-          var options = {
-            fields: ['id' , 'title', 'status', 'created'],
-          };
-
-          getContentTypeItem(api, type, options, function(err, response) {
-            var item = response.response;
-
-            expect(response.statusCode).to.be.equal(200);
-            expect(item.id).to.be.a('number');
-
-            // Iterate through object keys and see if only the ones expected show up.
-            for (var key in item) {
-              expect(options.fields.indexOf(key)).to.be.above(-1);
-            }
-
-            done();
-          });
-        });
-      });
-    });
-
-    describe('#getTermsList()', function() {
-      var vocabularies = [
-        'app_genre',
-        'app_platforms',
-        'app_publishers',
-        'entertainment_product_awards',
-        'pricing_structure',
-        'education_special_needs',
-        'grades',
-        'education_subjects',
-        'education_skills',
-        'tv_genre',
-      ];
-
-      vocabularies.forEach(function(vocabulary) {
-        it('should get terms for the vocabulary: ' + vocabulary, function(done) {
-          api.education().getTermsList(vocabulary, function(err, response) {
-            var terms = response.response;
-            terms.forEach(function(term) {
-              expect(term.parent_id).not.to.be.null;
-              expect(term.vocabulary).not.to.be.null;
-              expect(term.type).not.to.be.null;
-              expect(term.id).not.to.be.null;
-              expect(term.type).to.be.equal(vocabulary);
-            });
-
-            done();
-          });
-        });
-      });
-    });
-
-    describe('#search()', function() {
+    it('should have a getList() method for each content type.', function() {
+      // Dynamically run tests for each type.
       api.education().types.forEach(function(type) {
-        it('should get search results for type: ' + type, function(done) {
-          api.education().search(type, 'math', {}, function(err, response) {
-            var results = response.response;
+        var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
 
-            expect(response.statusCode).to.be.equal(200);
-            expect(results.length).to.be.above(0);
-
-            done();
-          });
+        api.education()['get' + typeName + 'List']({}, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          // compareURLs(api.url, url);
         });
+      });
+    });
 
-        it('should get search results with options for type: ' + type, function(done) {
-          var options = {
-            limit: 7,
-            fields: ['id', 'title', 'type', 'score'],
-          };
+    it('should have a getItem() method for each content type.', function() {
+      // Dynamically run tests for each type.
+      api.education().types.forEach(function(type) {
+        var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
 
-          api.education().search(type, 'math', options, function(err, response) {
-            var results = response.response;
-
-            expect(response.statusCode).to.be.equal(200);
-            expect(results.length).to.be.above(0);
-
-            results.forEach(function(item) {
-              // Iterate through object keys and see if only the ones expected show up.
-              for (var key in item) {
-                // console.log(key);
-                expect(options.fields.indexOf(key)).to.be.above(-1);
-              }
-            });
-
-            done();
-          });
+        api.education()['get' + typeName + 'List']({}, function(err, response) {
+          var url = baseURL.join('/') + '?' + api.serialize(baseQuery);
+          // compareURLs(api.url, url);
         });
       });
     });
@@ -455,63 +407,75 @@ describe('Common Sense API Tests', function() {
   describe('CommonSenseApiMedia()', function() {
 
   });
-});
 
-/**
- * Helper function to get a list of a given type.
- *
- * @param object
- *   an instance of CommonSenseApi().
- * @param string
- *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
- * @param array
- *   filter options that the Common Sense API supports.
- * @param function
- *   the callback function to be called after the async request.
- *   The callback is to take 2 parameters:
- *   - err: an error message if there is a fail.
- *   - response: the JSON response data from the call.
- */
-function getContentTypeList(api, type, options, callback) {
-  var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
+  /**
+   * Helper method to compare two URLs and run asserts on them.
+   *
+   * @param string
+   *   a url.
+   * @param string
+   *   another url.
+   */
+  function compareURLs(url1, url2) {
+    var url1Parts = url1.split('?');
+    var url2Parts = url2.split('?');
 
-  // Get a list of the given type.
-  api.education()['get' + typeName + 'List'](options, function(err, response) {
-    callback(err, response);
-  });
-}
+    expect(url1Parts[0]).to.be.equal(url2Parts[0]);
+    expect(api.deserialize(url1Parts[1])).to.be.eql(api.deserialize(url2Parts[1]));
+  }
 
-/**
- * Helper function to get a random content item of a given type.
- *
- * @param object
- *   an instance of CommonSenseApi().
- * @param string
- *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
- * @param array
- *   filter options that the Common Sense API supports.
- * @param function
- *   the callback function to be called after the async request.
- *   The callback is to take 2 parameters:
- *   - err: an error message if there is a fail.
- *   - response: the JSON response data from the call.
- */
-function getContentTypeItem(api, type, options, callback) {
-  var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
-  var ids = [];
+  /**
+   * Helper function to get a list of a given type.
+   *
+   * @param string
+   *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   * @param array
+   *   filter options that the Common Sense API supports.
+   * @param function
+   *   the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
+   *   - err: an error message if there is a fail.
+   *   - response: the JSON response data from the call.
+   */
+  function getContentTypeList(type, options, callback) {
+    var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
 
-  // Get a list of IDs of the given type.
-  api.education()['get' + typeName + 'List']({ fields: ['id'] }, function(err, response) {
-    var items = response.response;
-
-    items.forEach(function(item) {
-      ids.push(item.id);
-    });
-
-    // Use a random ID from the list to test with.
-    var id = ids[Math.floor(Math.random()*ids.length)];
-    api.education()['get' + typeName + 'Item'](id, options, function(err, response) {
+    // Get a list of the given type.
+    api.education()['get' + typeName + 'List'](options, function(err, response) {
       callback(err, response);
     });
-  });
-}
+  }
+
+  /**
+   * Helper function to get a random content item of a given type.
+   *
+   * @param string
+   *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   * @param array
+   *   filter options that the Common Sense API supports.
+   * @param function
+   *   the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
+   *   - err: an error message if there is a fail.
+   *   - response: the JSON response data from the call.
+   */
+  function getContentTypeItem(type, options, callback) {
+    var typeName = api.camelCaser(type).charAt(0).toUpperCase() + api.camelCaser(type).slice(1);
+    var ids = [];
+
+    // Get a list of IDs of the given type.
+    api.education()['get' + typeName + 'List']({ fields: ['id'] }, function(err, response) {
+      var items = response.response;
+
+      items.forEach(function(item) {
+        ids.push(item.id);
+      });
+
+      // Use a random ID from the list to test with.
+      var id = ids[Math.floor(Math.random()*ids.length)];
+      api.education()['get' + typeName + 'Item'](id, options, function(err, response) {
+        callback(err, response);
+      });
+    });
+  }
+});
