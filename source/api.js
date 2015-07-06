@@ -306,6 +306,7 @@ function CommonSenseApiEducation(spec) {
     'lists',
     'user_reviews',
     'boards',
+    'schools',
   ];
 
   /**
