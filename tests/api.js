@@ -1,18 +1,15 @@
 var expect = chai.expect;
 
 describe('Common Sense API Tests', function() {
-  var clientId = '1234567';
-  var appId = 'abcdefg';
-  var host = 'https://api-dev.commonsense.org';
   var api;
   var baseURL;
   var baseQuery;
 
   beforeEach(function() {
     api = new CommonSenseApi({
-      clientId: clientId,
-      appId: appId,
-      host: host,
+      clientId: config.clientId,
+      appId: config.appId,
+      host: config.host,
       debug: true, // Set debug mode for tests.
     });
 
@@ -27,8 +24,6 @@ describe('Common Sense API Tests', function() {
     ];
 
     baseQuery = {
-      clientId: api.clientId,
-      appId: api.appId,
       limit: api.query.limit,
       page: api.query.page,
     };
@@ -37,8 +32,8 @@ describe('Common Sense API Tests', function() {
   describe('CommonSenseApi()', function() {
     describe('init', function() {
       it('should load options when instantiated.', function() {
-        expect(api.clientId).to.be.equal(clientId);
-        expect(api.appId).to.be.equal(appId);
+        expect(api.clientId).to.be.equal(config.clientId);
+        expect(api.appId).to.be.equal(config.appId);
       });
 
       it('should override host if defined, defaulted to production.', function() {
@@ -46,7 +41,7 @@ describe('Common Sense API Tests', function() {
           clientId: config.clientId,
           appId: config.appId,
         });
-        expect(apiHost.host).to.be.equal('https://api.commonsense.org');
+        expect(apiHost.host).to.be.equal('https://api.graphite.org');
 
         var apiHost = new CommonSenseApi({
           clientId: config.clientId,
@@ -63,7 +58,7 @@ describe('Common Sense API Tests', function() {
           foo: 'bar',
           bar: 'bats',
           hello: 'world',
-        }
+        };
 
         query = api.serialize(obj);
         expect(query).to.be.equal('foo=bar&bar=bats&hello=world');
@@ -76,7 +71,7 @@ describe('Common Sense API Tests', function() {
           foo: 'bar',
           bar: 'bats',
           hello: 'world',
-        }
+        };
 
         query = api.deserialize(api.serialize(obj));
         expect(query).to.be.eql(obj);
@@ -160,6 +155,24 @@ describe('Common Sense API Tests', function() {
       });
     });
 
+    describe('#setHeader()', function() {
+      it('should set header data.', function() {
+        // Clear header data.
+        api.headers = {};
+
+        // Set header data.
+        api.setHeader('foo-header', 'bar');
+        api.setHeader('bar-header', 'foo');
+
+        var headers = {
+          'foo-header': 'bar',
+          'bar-header': 'foo',
+        };
+
+        expect(api.headers).to.be.eql(headers);
+      });
+    });
+
     describe('#request()', function() {
       it('should make a request to an external service.', function(done) {
         var endpoint = 'foo/123';
@@ -208,6 +221,11 @@ describe('Common Sense API Tests', function() {
             done();
           });
         });
+      });
+
+      it('should send authentication tokens via the header', function() {
+        expect(api.headers['client-id']).to.be.equal(config.clientId);
+        expect(api.headers['app-id']).to.be.equal(config.appId);
       });
 
       it('should make a request with different limits.', function(done) {
@@ -411,10 +429,10 @@ describe('Common Sense API Tests', function() {
   /**
    * Helper method to compare two URLs and run asserts on them.
    *
-   * @param string
-   *   a url.
-   * @param string
-   *   another url.
+   * @param url1
+   *   string - a url.
+   * @param url2
+   *   string - another url.
    */
   function compareURLs(url1, url2) {
     var url1Parts = url1.split('?');
@@ -427,12 +445,12 @@ describe('Common Sense API Tests', function() {
   /**
    * Helper function to get a list of a given type.
    *
-   * @param string
-   *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
-   * @param array
-   *   filter options that the Common Sense API supports.
-   * @param function
-   *   the callback function to be called after the async request.
+   * @param type
+   *   string - the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   * @param options
+   *   array - filter options that the Common Sense API supports.
+   * @param callback
+   *   function - the callback function to be called after the async request.
    *   The callback is to take 2 parameters:
    *   - err: an error message if there is a fail.
    *   - response: the JSON response data from the call.
@@ -449,12 +467,12 @@ describe('Common Sense API Tests', function() {
   /**
    * Helper function to get a random content item of a given type.
    *
-   * @param string
-   *   the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
-   * @param array
-   *   filter options that the Common Sense API supports.
-   * @param function
-   *   the callback function to be called after the async request.
+   * @param type
+   *   string - the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   * @param options
+   *   array - filter options that the Common Sense API supports.
+   * @param callback
+   *   function - the callback function to be called after the async request.
    *   The callback is to take 2 parameters:
    *   - err: an error message if there is a fail.
    *   - response: the JSON response data from the call.
