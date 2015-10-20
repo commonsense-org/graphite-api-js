@@ -13,14 +13,7 @@ function CommonSenseApi(options) {
   // Set default header data.
   that.headers = {
     'client-id': that.clientId,
-    'app-id': that.appId,
-  };
-
-  // Set request query defaults.
-  that.query = {
-    fields: [],
-    limit: 10,
-    page: 1,
+    'app-id': that.appId
   };
 
   // Debug mode used for tests.
@@ -33,14 +26,28 @@ function CommonSenseApi(options) {
   }
 
   /**
+   * Sets the instance defaults.
+   */
+  that.setDefaults = function() {
+    that.query = {
+      fields: [],
+      limit: 10,
+      page: 1
+    };
+  };
+
+  // Set request instance defaults.
+  that.setDefaults();
+
+  /**
    * Make an asynchronous request to the Common Sense API.
    *
    * @param path
-   *   string - the endpoint path of the API call.
+   *   string: the endpoint path of the API call.
    * @param options
-   *   object - optional parameters for the API call.
+   *   object: optional parameters for the API call.
    * @param callback
-   *   function - the callback function to be called after the async request.
+   *   function: the callback function to be called after the async request.
    *   The callback is to take 2 parameters:
    *   - err: an error message if there is a fail.
    *   - response: the JSON response data from the call.
@@ -89,7 +96,7 @@ function CommonSenseApi(options) {
     // Get the response.
     xmlhttp.onreadystatechange = function() {
       if (xmlhttp.readyState == 4) {
-        if(xmlhttp.status == 200){
+        if(xmlhttp.status == 200) {
           var json = eval('(' + xmlhttp.responseText + ')');
 
           // Create taxonomy trees if defined.
@@ -126,6 +133,9 @@ function CommonSenseApi(options) {
         else {
           callback('An error has occurred (error code: ' + xmlhttp.status + ')');
         }
+
+        // Refresh request instance.
+        that.setDefaults();
       }
     };
 
@@ -134,7 +144,7 @@ function CommonSenseApi(options) {
       that.host,
       'v' + that.version,
       that.platform,
-      path,
+      path
     ];
 
     that.url =  urlParts.join('/')  + '?' + that.serialize(that.query);
@@ -146,8 +156,6 @@ function CommonSenseApi(options) {
       for (var key in that.headers) {
         xmlhttp.setRequestHeader(key, that.headers[key]);
       }
-
-      console.log(xmlhttp.getRequ);
 
       xmlhttp.send();
     } else {
@@ -164,7 +172,7 @@ function CommonSenseApi(options) {
    *    returns: hello=world&foo=bar
    *
    * @param obj
-   *   object - an object with key/value pairs.
+   *   object: an object with key/value pairs.
    * @return string
    *   a URL query string.
    */
@@ -188,7 +196,7 @@ function CommonSenseApi(options) {
    *    returns: { hello: 'world', foo: 'bar' };
    *
    * @param query
-   *   string - a URL query string.
+   *   string: a URL query string.
    * @return string
    *   an object with key/value pairs.
    */
@@ -207,7 +215,7 @@ function CommonSenseApi(options) {
    * Converts a string with underscores to camel-case text.
    *
    * @param str
-   *   string - the string to be converted.
+   *   string: the string to be converted.
    * @return string
    *   the camel-cased string.
    */
@@ -221,11 +229,11 @@ function CommonSenseApi(options) {
    * Converts a flat array of taxonomy terms to a hierarchical tree structure.
    *
    * @param terms
-   *   array - an array of term objects.
+   *   array: an array of term objects.
    * @param parentId
-   *   int - a taxonomy parent ID.
+   *   int: a taxonomy parent ID.
    * @return
-   *   array - an array of term objects with nested children.
+   *   array: an array of term objects with nested children.
    */
   that.generateTermTree = function(terms, parentId) {
     var tree = [];
@@ -246,9 +254,9 @@ function CommonSenseApi(options) {
    * Sets a header variable to be sent over on a request.
    *
    * @param key
-   *   string - the header variable key.
+   *   string: the header variable key.
    * @param value
-   *   string - the header variable value.
+   *   string: the header variable value.
    */
   that.setHeader = function(key, value) {
     that.headers[key] = value;
@@ -278,11 +286,11 @@ function CommonSenseApi(options) {
    * Get a list of data of a given type.
    *
    * @param type
-   *   string - the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   *   string: the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
    * @param options
-   *   array - filter options that the Common Sense API supports.
+   *   array: filter options that the Common Sense API supports.
    * @param callback
-   *   function - the callback function to be called after the async request.
+   *   function: the callback function to be called after the async request.
    *   The callback is to take 2 parameters:
    *   - err: an error message if there is a fail.
    *   - response: the JSON response data from the call.
@@ -297,15 +305,15 @@ function CommonSenseApi(options) {
    * Get a single item of data of a given type and ID.
    *
    * @param type
-   *   string - the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   *   string: the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
    * @param id
    *   the system ID of the item.
    * @param id
-   *   array - filter options that the Common Sense API supports.
+   *   array: filter options that the Common Sense API supports.
    * @param options
-   *   array - filter options that the Common Sense API supports.
+   *   array: filter options that the Common Sense API supports.
    * @param callback
-   *   function - the callback function to be called after the async request.
+   *   function: the callback function to be called after the async request.
    *   The callback is to take 2 parameters:
    *   - err: an error message if there is a fail.
    *   - response: the JSON response data from the call.
@@ -349,9 +357,9 @@ function CommonSenseApiEducation(options) {
      * Get a list of a given type.
      *
      * @param options
-     *   object - optional parameters for the API call.
+     *   object: optional parameters for the API call.
      * @param callback
-     *   function - the callback function to be called after the async request.
+     *   function: the callback function to be called after the async request.
      *   The callback is to take 2 parameters:
      *   - err: an error message if there is a fail.
      *   - response: the JSON response data from the call.
@@ -375,11 +383,11 @@ function CommonSenseApiEducation(options) {
      * Get a single item of a given type.
      *
      * @param id
-     *   object - optional parameters for the API call.
+     *   object: optional parameters for the API call.
      * @param options
-     *   object - optional parameters for the API call.
+     *   object: optional parameters for the API call.
      * @param callback
-     *   function - the callback function to be called after the async request.
+     *   function: the callback function to be called after the async request.
      *   The callback is to take 2 parameters:
      *   - err: an error message if there is a fail.
      *   - response: the JSON response data from the call.
@@ -395,11 +403,11 @@ function CommonSenseApiEducation(options) {
    * Get a list of taxonomy terms of a specified vocabulary.
    *
    * @param vocabulary
-   *   string - a vocabulary ID.
+   *   string: a vocabulary ID.
    * @param options
-   *   object - optional parameters for the API call.
+   *   object: optional parameters for the API call.
    * @param callback
-   *   function - the callback function to be called after the async request.
+   *   function: the callback function to be called after the async request.
    *   The callback is to take 2 parameters:
    *   - err: an error message if there is a fail.
    *   - response: the JSON response data from the call.
@@ -414,19 +422,34 @@ function CommonSenseApiEducation(options) {
    * Perform a text search on a given type.
    *
    * @param type
-   *   string - the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   *   string: the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
    * @param q
-   *   string - the search string.
+   *   string: the search string.
    * @param options
-   *   array - filter options that the Common Sense API supports.
+   *   array: filter options that the Common Sense API supports.
    * @param callback
-   *   function - the callback function to be called after the async request.
+   *   function: the callback function to be called after the async request.
    *   The callback is to take 2 parameters:
    *   - err: an error message if there is a fail.
    *   - response: the JSON response data from the call.
    */
   that.search = function(type, q, options, callback) {
     that.request('search/' + type + '/' + q, options, function(err, response) {
+      callback(err, response);
+    });
+  };
+
+  /**
+   * Get a count list of how many users are associated with a school in a state/province.
+   *
+   * @param callback
+   *   function: the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
+   *   - err: an error message if there is a fail.
+   *   - response: the JSON response data from the call.
+   */
+  that.getUserProvinceCounts = function(callback) {
+    that.request('users/province_count', {}, function(err, response) {
       callback(err, response);
     });
   };
