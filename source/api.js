@@ -97,7 +97,7 @@ function CommonSenseApi(options) {
     xmlhttp.onreadystatechange = function() {
       if (xmlhttp.readyState == 4) {
         if(xmlhttp.status == 200) {
-          var json = eval('(' + xmlhttp.responseText + ')');
+          var json = JSON.parse(xmlhttp.responseText);
 
           // Create taxonomy trees if defined.
           if (options.tree) {
@@ -288,7 +288,7 @@ function CommonSenseApi(options) {
    * @param type
    *   string: the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
    * @param options
-   *   array: filter options that the Common Sense API supports.
+   *   object: optional parameters for the API call.
    * @param callback
    *   function: the callback function to be called after the async request.
    *   The callback is to take 2 parameters:
@@ -308,10 +308,8 @@ function CommonSenseApi(options) {
    *   string: the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
    * @param id
    *   the system ID of the item.
-   * @param id
-   *   array: filter options that the Common Sense API supports.
    * @param options
-   *   array: filter options that the Common Sense API supports.
+   *   object: optional parameters for the API call.
    * @param callback
    *   function: the callback function to be called after the async request.
    *   The callback is to take 2 parameters:
@@ -426,7 +424,7 @@ function CommonSenseApiEducation(options) {
    * @param q
    *   string: the search string.
    * @param options
-   *   array: filter options that the Common Sense API supports.
+   *   object: optional parameters for the API call.
    * @param callback
    *   function: the callback function to be called after the async request.
    *   The callback is to take 2 parameters:
@@ -435,6 +433,29 @@ function CommonSenseApiEducation(options) {
    */
   that.search = function(type, q, options, callback) {
     that.request('search/' + type + '/' + q, options, function(err, response) {
+      callback(err, response);
+    });
+  };
+
+  /**
+   * Get the meta results of a given search..
+   *
+   * @param type
+   *   string: the type of data to retrieve (products, blogs, app_flows, lists, user_reviews, boards, users).
+   * @param q
+   *   string: the search string.
+   * @param options
+   *   object: optional parameters for the API call.
+   * @param callback
+   *   function: the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
+   *   - err: an error message if there is a fail.
+   *   - response: the JSON response data from the call.
+   */
+  that.searchMeta = function(type, q, options, callback) {
+    // http://local.api.graphite.org/v3/education/search/site/meta/math?searchType=product&grades=21939
+    options['searchType'] = type;
+    that.request('search/site/meta/' + q, options, function(err, response) {
       callback(err, response);
     });
   };
@@ -450,6 +471,23 @@ function CommonSenseApiEducation(options) {
    */
   that.getUserProvinceCounts = function(callback) {
     that.request('users/province_count', {}, function(err, response) {
+      callback(err, response);
+    });
+  };
+
+  /**
+   * Get a list of user saved items (bookmarks).
+   *
+   * @param options
+   *   object: optional parameters for the API call.
+   * @param callback
+   *   function: the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
+   *   - err: an error message if there is a fail.
+   *   - response: the JSON response data from the call.
+   */
+  that.getSavedItems = function(options, callback) {
+    that.request('saved_items', options, function(err, response) {
       callback(err, response);
     });
   };
