@@ -492,6 +492,23 @@ function CommonSenseApiEducation(options) {
     });
   };
 
+  /**
+   * Get the content type stats.
+   *
+   * @param options
+   *   object: optional parameters for the API call.
+   * @param callback
+   *   function: the callback function to be called after the async request.
+   *   The callback is to take 2 parameters:
+   *   - err: an error message if there is a fail.
+   *   - response: the JSON response data from the call.
+   */
+  that.getContentStats = function(options, callback) {
+    that.request('stats/content', options, function(err, response) {
+      callback(err, response);
+    });
+  };
+
   return that;
 }
 
